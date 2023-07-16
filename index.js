@@ -141,7 +141,7 @@ async function run() {
         .limit(1)
         .toArray();
       const lastMenuscriptId =
-        lastMenuscript[0]?.menuscriptId?.split('_')[1]?.parseInt() || 1000;
+        parseInt(lastMenuscript[0]?.menuscriptId?.split('_')[1]) || 1000;
       const menuscriptId = 'HSTU_' + (lastMenuscriptId + 1);
 
       const modifiedArticle = { ...newArticle, menuscriptId };
