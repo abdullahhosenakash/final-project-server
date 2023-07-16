@@ -92,16 +92,8 @@ async function run() {
       .db('finalProjectDatabase')
       .collection('articleCollection');
 
-    // GET methods
-    // app.get('/isUserAvailable', async (req, res) => {
-    //   const { userEmail } = req.query;
-    //   const result = await userCollection.findOne({ userEmail });
-    //   console.log(result);
-    // });
-
     app.get('/articles', async (req, res) => {
       const result = await articleCollection.find().toArray();
-      // console.log(result);
       res.send(result);
     });
 
@@ -109,14 +101,12 @@ async function run() {
       const { articleId } = req.query;
       const query = { _id: new ObjectId(articleId) };
       const result = await articleCollection.findOne(query);
-      // console.log(result);
       res.send(result);
     });
 
     app.get('/authorArticles', async (req, res) => {
       const { authorEmail } = req.query;
       const result = await articleCollection.find({ authorEmail }).toArray();
-      // console.log(result);
       res.send(result);
     });
 
@@ -129,6 +119,7 @@ async function run() {
     // POST methods
     app.post('/addUser', async (req, res) => {
       // const {userRole}=req.query;
+
       const newUser = req.body;
 
       const availableUser = await userCollection.findOne({
