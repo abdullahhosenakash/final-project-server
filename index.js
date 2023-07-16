@@ -135,7 +135,17 @@ async function run() {
 
     app.post('/addArticle', async (req, res) => {
       const newArticle = req.body;
-      const result = await articleCollection.insertOne(newArticle);
+      const lastMenuscript = await articleCollection
+        .find()
+        .sort({ _id: -1 })
+        .limit(1)
+        .toArray();
+      const lastMenuscriptId =
+        lastMenuscript[0]?.menuscriptId?.split('_')[1]?.parseInt() || 1000;
+      const menuscriptId = 'HSTU_' + (lastMenuscriptId + 1);
+
+      const modifiedArticle = { ...newArticle, menuscriptId };
+      const result = await articleCollection.insertOne(modifiedArticle);
       const editor = await userCollection.findOne({ userRole: 'editor' });
       const editorEmail = editor?.userEmail;
       const articleId = result?.insertedId?.toString()?.split('"')[0];
