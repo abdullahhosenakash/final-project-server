@@ -88,25 +88,36 @@ async function run() {
       .db('finalProjectDatabase')
       .collection('userCollection');
 
-    const articleCollection = client
+    const menuscriptCollection = client
       .db('finalProjectDatabase')
       .collection('articleCollection');
 
+    const draftCollection = client
+      .db('finalProjectDatabase')
+      .collection('draftCollection');
+
     app.get('/articles', async (req, res) => {
-      const result = await articleCollection.find().toArray();
+      const result = await menuscriptCollection.find().toArray();
       res.send(result);
     });
 
     app.get('/article', async (req, res) => {
       const { articleId } = req.query;
       const query = { _id: new ObjectId(articleId) };
-      const result = await articleCollection.findOne(query);
+      const result = await menuscriptCollection.findOne(query);
       res.send(result);
     });
 
     app.get('/authorArticles', async (req, res) => {
       const { authorEmail } = req.query;
-      const result = await articleCollection.find({ authorEmail }).toArray();
+      const result = await menuscriptCollection.find({ authorEmail }).toArray();
+      console.log(authorEmail);
+      res.send(result);
+    });
+
+    app.get('/authorDrafts', async (req, res) => {
+      const { authorEmail } = req.query;
+      const result = await draftCollection.find({ authorEmail }).toArray();
       res.send(result);
     });
 
@@ -133,9 +144,48 @@ async function run() {
       }
     });
 
-    app.post('/addArticle', async (req, res) => {
-      const newArticle = req.body;
-      const lastMenuscript = await articleCollection
+    app.put('/updateDraftMenuscript/:id', async (req, res) => {
+      const id = req.params.id;
+      const updatedDraftMenuscript = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          title: updatedDraftMenuscript.title,
+          abstract: updatedDraftMenuscript.abstract,
+          keywords: updatedDraftMenuscript.keywords,
+          description: updatedDraftMenuscript.description,
+          firstName: updatedDraftMenuscript.firstName,
+          lastName: updatedDraftMenuscript.lastName,
+          country: updatedDraftMenuscript.country,
+          department: updatedDraftMenuscript.department,
+          institute: updatedDraftMenuscript.institute,
+          authorRole: updatedDraftMenuscript.authorRole,
+          authorInfo1: updatedDraftMenuscript.authorInfo1,
+          authorInfo2: updatedDraftMenuscript.authorInfo2,
+          authorInfo3: updatedDraftMenuscript.authorInfo3,
+          fundingSource: updatedDraftMenuscript.fundingSource,
+          dateTime: updatedDraftMenuscript.dateTime,
+          authorEmail: updatedDraftMenuscript.authorEmail
+        }
+      };
+      const result = await draftCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.post('/newDraftMenuscript', async (req, res) => {
+      const newDraft = req.body;
+      const result = await draftCollection.insertOne(newDraft);
+      res.send(result);
+    });
+
+    app.post('/newMenuscript', async (req, res) => {
+      const newMenuscript = req.body;
+      const lastMenuscript = await menuscriptCollection
         .find()
         .sort({ _id: -1 })
         .limit(1)
@@ -144,13 +194,25 @@ async function run() {
         parseInt(lastMenuscript[0]?.menuscriptId?.split('_')[1]) || 1000;
       const menuscriptId = 'HSTU_' + (lastMenuscriptId + 1);
 
-      const modifiedArticle = { ...newArticle, menuscriptId };
-      const result = await articleCollection.insertOne(modifiedArticle);
+      const modifiedArticle = { ...newMenuscript, menuscriptId };
+      const result = await menuscriptCollection.insertOne(modifiedArticle);
       const editor = await userCollection.findOne({ userRole: 'editor' });
       const editorEmail = editor?.userEmail;
-      const articleId = result?.insertedId?.toString()?.split('"')[0];
-      sendEmailToAuthor(newArticle?.authorEmail, articleId);
-      sendEmailToEditor(editorEmail, articleId, newArticle?.authorName);
+      const newMenuscriptId = result?.insertedId?.toString()?.split('"')[0];
+      sendEmailToAuthor(newMenuscript?.authorEmail, newMenuscriptId);
+      sendEmailToEditor(
+        editorEmail,
+        newMenuscriptId,
+        newMenuscript?.authorName
+      );
+      res.send(result);
+    });
+
+    // delete methods
+    app.delete('/deleteDraft/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await draftCollection.deleteOne(query);
       res.send(result);
     });
   } finally {
@@ -165,3 +227,8 @@ app.get('/', async (req, res) => {
 app.listen(port, () => {
   console.log('Project server running on port', port);
 });
+
+// ,
+//   "engines": {
+//     "node": ">=14 <15"
+//   }
