@@ -503,7 +503,7 @@ async function run() {
     app.get('/authorDrafts', async (req, res) => {
       const { authorEmail } = req.query;
       const result = await draftCollection.find({ authorEmail })?.toArray();
-      res.send(result);
+      return res.send(result);
     });
 
     app.get('/userRole', async (req, res) => {
@@ -891,3 +891,4 @@ app.listen(port, () => {
 //   "engines": {
 //     "node": ">=14 <15"
 //   }
+//
