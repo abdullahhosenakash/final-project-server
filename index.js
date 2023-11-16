@@ -43,7 +43,7 @@ const sendEmailToAuthor = (authorsEmail, manuscriptId) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>Your manuscript has been submitted successfully</p>
-      <p>You can see your manuscripts by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p>You can see your manuscripts by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p>Thank you!</p>
       `
     },
@@ -69,7 +69,7 @@ const sendEmailToEditor = (editorEmail, authorName, authorsEmail) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>A new manuscript is submitted from ${authorName} where authors emails are (${authorsEmail})</p>
-      <p><a href='http://localhost:3000/manuscriptsAsCoAuthor'>Click here</a> to see available manuscripts now</p>
+      <p><a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>Click here</a> to see available manuscripts now</p>
       <p>Thank you!</p>
       `
     },
@@ -102,7 +102,7 @@ const sendEmailToAuthorAfterForward = (
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>Your manuscript submitted on ${selectedManuscript?.dateTime} is forwarded at ${forwardingDateTime} to reviewers</p>
-      <p>You can check the status of the manuscript at your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p>You can check the status of the manuscript at your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p>Thank you!</p>
       `
     },
@@ -221,7 +221,7 @@ const sendEmailToEditorAfterForward = (
         }
         </tbody>
       </table>
-      <p style='padding: 0'>You can check the status of the manuscripts by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p style='padding: 0'>You can check the status of the manuscripts by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p style='padding: 0'>Thank you!</p>
       `
     },
@@ -251,7 +251,7 @@ const sendEmailToAuthorAfterRevise = (selectedManuscript, manuscriptId) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>Your manuscript ${manuscriptId} that was need revised told by the reviewers is resubmitted successfully at ${selectedManuscript?.dateTime}</p>
-      <p>You can check the status of the manuscript at your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p>You can check the status of the manuscript at your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p>Thank you!</p>
       `
     },
@@ -277,7 +277,7 @@ const sendEmailToEditorAfterRevise = (editorEmail, manuscriptId, dateTime) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p style='padding: 0'>The manuscript ${manuscriptId} that was need revised told by the reviewers is resubmitted at ${dateTime}.</p>
-      <p style='padding: 0'>You can check the status of the manuscripts by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p style='padding: 0'>You can check the status of the manuscripts by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p style='padding: 0'>Thank you!</p>
       `
     },
@@ -316,7 +316,7 @@ const sendEmailToReviewer = (
         } has been ${
           selectedManuscript?.revised ? 're' : ''
         }submitted on ${forwardingDateTime} from our journal named <i><b>Journal of Science and Technology, HSTU</b></i> for your review.</p>
-        <p style='padding: 0'>You can review the manuscripts from your dashboard by <a href='http://localhost:3000/manuscriptsAsReviewer'>clicking here</a></p>
+        <p style='padding: 0'>You can review the manuscripts from your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsReviewer'>clicking here</a></p>
         <p style='padding-top: 2px; padding-bottom: 0'>Thanking you</p>
         <p style='padding: 0'>Journal of Science and Technology,</p>
         <p style='padding: 0'>HSTU</p>
@@ -344,7 +344,7 @@ const sendEmailToEditorAfterReview = (selectedManuscript, editorEmail) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>The manuscript that was submitted to the reviewers for review at ${selectedManuscript?.forwardingDateTime} has been reviewed successfully</p>
-      <p>You can see the manuscripts status from your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p>You can see the manuscripts status from your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p>Thank you!</p>
       `
     },
@@ -374,7 +374,7 @@ const sendEmailToEditorAfterReview = (selectedManuscript, editorEmail) => {
 //       //You can use "html:" to send HTML email content. It's magic!
 //       html: `
 //       <p>Your manuscript that was submitted at ${selectedManuscript?.dateTime} has been reviewed successfully</p>
-//       <p>You can see the manuscripts status from your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+//       <p>You can see the manuscripts status from your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
 //       <p>Thank you!</p>
 //       `
 //     },
@@ -400,7 +400,7 @@ const sendEmailToEditorAfterDecision = (selectedManuscript, editorEmail) => {
       //You can use "html:" to send HTML email content. It's magic!
       html: `
       <p>The manuscript that was submitted at ${selectedManuscript?.dateTime} by the authors has been reviewed successfully</p>
-      <p>You can see the manuscripts status from your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+      <p>You can see the manuscripts status from your dashboard by <a href='https://hstu-final-project.web.app/manuscriptsAsCoAuthor'>clicking here</a></p>
       <p>Thank you!</p>
       `
     },
@@ -978,4 +978,3 @@ app.listen(port, () => {
 //   "engines": {
 //     "node": ">=14 <15"
 //   }
-//
