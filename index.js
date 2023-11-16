@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const mg = require('nodemailer-mailgun-transport');
 require('dotenv').config();
@@ -357,35 +358,35 @@ const sendEmailToEditorAfterReview = (selectedManuscript, editorEmail) => {
   );
 };
 
-const sendEmailToAuthorAfterDecision = (selectedManuscript) => {
-  const authorsEmail = [
-    selectedManuscript?.authorEmail,
-    selectedManuscript?.authorSequence?.map((author) => author.authorEmail)
-  ];
-  mailTransporter.sendMail(
-    {
-      from: 'abdullahhosenakash@gmail.com',
-      to: authorsEmail, // An array if you have multiple recipients.
-      // cc: 'second@domain.com',
-      // bcc: 'secretagent@company.gov',
-      subject: 'Your manuscript has been reviewed',
-      // replyTo: 'reply2this@company.com',
-      //You can use "html:" to send HTML email content. It's magic!
-      html: `
-      <p>Your manuscript that was submitted at ${selectedManuscript?.dateTime} has been reviewed successfully</p>
-      <p>You can see the manuscripts status from your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
-      <p>Thank you!</p>
-      `
-    },
-    (err, info) => {
-      if (err) {
-        // console.log(`Error: ${err}`);
-      } else {
-        // console.log(`Response: ${info}`);
-      }
-    }
-  );
-};
+// const sendEmailToAuthorAfterDecision = (selectedManuscript) => {
+//   const authorsEmail = [
+//     selectedManuscript?.authorEmail,
+//     selectedManuscript?.authorSequence?.map((author) => author.authorEmail)
+//   ];
+//   mailTransporter.sendMail(
+//     {
+//       from: 'abdullahhosenakash@gmail.com',
+//       to: authorsEmail, // An array if you have multiple recipients.
+//       // cc: 'second@domain.com',
+//       // bcc: 'secretagent@company.gov',
+//       subject: 'Your manuscript has been reviewed',
+//       // replyTo: 'reply2this@company.com',
+//       //You can use "html:" to send HTML email content. It's magic!
+//       html: `
+//       <p>Your manuscript that was submitted at ${selectedManuscript?.dateTime} has been reviewed successfully</p>
+//       <p>You can see the manuscripts status from your dashboard by <a href='http://localhost:3000/manuscriptsAsCoAuthor'>clicking here</a></p>
+//       <p>Thank you!</p>
+//       `
+//     },
+//     (err, info) => {
+//       if (err) {
+//         // console.log(`Error: ${err}`);
+//       } else {
+//         // console.log(`Response: ${info}`);
+//       }
+//     }
+//   );
+// };
 
 const sendEmailToEditorAfterDecision = (selectedManuscript, editorEmail) => {
   mailTransporter.sendMail(
@@ -434,10 +435,25 @@ const sendEmailToEditorAfterDecision = (selectedManuscript, editorEmail) => {
 //   }
 // };
 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: 'unAuthorized Access' });
+  }
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
 async function run() {
   try {
     await client.connect();
-    console.log('connected');
+    // console.log('connected');
     const userCollection = client
       .db('finalProjectDatabase')
       .collection('userCollection');
@@ -450,12 +466,22 @@ async function run() {
       .db('finalProjectDatabase')
       .collection('draftCollection');
 
-    app.get('/manuscriptsAsCoAuthor', async (req, res) => {
+    // get methods
+    app.get('/user-login', (req, res) => {
+      const { userEmail } = req.query;
+      const token = jwt.sign(
+        { email: userEmail },
+        process.env.ACCESS_TOKEN_SECRET
+      );
+      res.send({ token });
+    });
+
+    app.get('/manuscriptsAsCoAuthor', verifyJWT, async (req, res) => {
       const result = await manuscriptCollection.find()?.toArray();
       res.send(result);
     });
 
-    app.get('/manuscriptsAsReviewer', async (req, res) => {
+    app.get('/manuscriptsAsReviewer', verifyJWT, async (req, res) => {
       const { reviewerEmail } = req.query;
       const manuscripts = await manuscriptCollection.find()?.toArray();
       const reviewerManuscripts = manuscripts?.filter((manuscript) => {
@@ -468,7 +494,7 @@ async function run() {
       res.send(reviewerManuscripts);
     });
 
-    app.get('/authorManuscripts', async (req, res) => {
+    app.get('/authorManuscripts', verifyJWT, async (req, res) => {
       const { authorEmail } = req.query;
       const resultFromDirectEmailQuery = await manuscriptCollection
         .find({ authorEmail })
@@ -500,43 +526,49 @@ async function run() {
       res.send(sortedAuthorManuscripts);
     });
 
-    app.get('/authorDrafts', async (req, res) => {
+    app.get('/authorDrafts', verifyJWT, async (req, res) => {
       const { authorEmail } = req.query;
       const result = await draftCollection.find({ authorEmail })?.toArray();
       return res.send(result);
     });
 
-    app.get('/userRole', async (req, res) => {
+    app.get('/userRole', verifyJWT, async (req, res) => {
       const { userEmail } = req.query;
       const result = await userCollection.findOne({ userEmail });
       res.send({ userRole: result?.userRole });
     });
 
-    app.get('/userInfo', async (req, res) => {
+    app.get('/userInfo', verifyJWT, async (req, res) => {
       const { userEmail } = req.query;
       const result = await userCollection.findOne({ userEmail });
       res.send(result);
     });
 
-    app.get('/manuscriptMessages', async (req, res) => {
-      const { manuscriptId, userRole } = req.query;
+    app.get('/manuscriptMessages', verifyJWT, async (req, res) => {
+      const { manuscriptId, userRole, target } = req.query;
       if (!manuscriptId && !userRole)
         return res.send({ errorMessage: 'UnAuthorized Promise' });
       const selectedManuscript = await manuscriptCollection.findOne({
         manuscriptId
       });
-      const messages = selectedManuscript.messages;
-      if (userRole === 'author') {
-        const editorAndAuthorMessage = messages.editorAndAuthor;
-        res.send(editorAndAuthorMessage);
+      const messages = selectedManuscript?.messages;
+      if (userRole === 'author' || target === 'author') {
+        const editorAndAuthorMessage = messages?.editorAndAuthor;
+        // console.log(editorAndAuthorMessage);
+        if (editorAndAuthorMessage) {
+          res.send(editorAndAuthorMessage);
+        } else {
+          res.send([]);
+        }
       } else {
         const editorAndReviewerMessages = messages.editorAndReviewer;
+        // console.log(editorAndReviewerMessages);
         res.send(editorAndReviewerMessages);
       }
     });
 
     // POST methods
-    app.post('/addUser', async (req, res) => {
+    app.post('/addUser', verifyJWT, async (req, res) => {
       const newUser = req.body;
       const availableUser = await userCollection.findOne({
         userEmail: newUser?.userEmail
@@ -549,7 +581,47 @@ async function run() {
       }
     });
 
-    app.put('/updateDraftManuscript/:id', async (req, res) => {
+    app.post('/newDraftManuscript', verifyJWT, async (req, res) => {
+      const newDraft = req.body;
+      const result = await draftCollection.insertOne(newDraft);
+      res.send(result);
+    });
+
+    app.post('/newManuscript', async (req, res) => {
+      // validateUser();
+      const newManuscript = req.body;
+      const authorName =
+        newManuscript?.authorInfo?.firstName +
+        ' ' +
+        newManuscript?.authorInfo?.lastName;
+      const lastManuscript = await manuscriptCollection
+        .find()
+        ?.sort({ _id: -1 })
+        ?.limit(1)
+        ?.toArray();
+      const lastManuscriptId =
+        parseInt(lastManuscript[0]?.manuscriptId?.split('_')[1]) || 1000;
+      const manuscriptId = 'HSTU_' + (lastManuscriptId + 1);
+      const modifiedManuscript = {
+        ...newManuscript,
+        manuscriptId,
+        messages: { editorAndAuthor: [], editorAndReviewer: [] }
+      };
+      const result = await manuscriptCollection.insertOne(modifiedManuscript);
+      const editor = await userCollection.findOne({ userRole: 'editor' });
+      const editorEmail = editor?.userEmail;
+      const newManuscriptId = result?.insertedId?.toString()?.split('"')[0];
+      const authorsEmail = [
+        newManuscript?.authorEmail,
+        ...newManuscript?.authorSequence?.map((a) => a.authorEmail)
+      ];
+      sendEmailToAuthor(authorsEmail, newManuscriptId);
+      sendEmailToEditor(editorEmail, authorName, authorsEmail);
+      res.send(result);
+    });
+
+    // put methods
+    app.put('/updateDraftManuscript/:id', verifyJWT, async (req, res) => {
       const id = req.params?.id;
       const { _id, ...updatedDraftManuscript } = req.body || {};
       const filter = { _id: new ObjectId(id) };
@@ -583,7 +655,7 @@ async function run() {
       }
     });
 
-    app.put('/updateRevisedManuscript', async (req, res) => {
+    app.put('/updateRevisedManuscript', verifyJWT, async (req, res) => {
       const { _id, manuscriptId, ...updatedManuscript } = req.body;
       const filter = { manuscriptId };
       const updatedDoc = {
@@ -605,35 +677,56 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/updateManuscript', async (req, res) => {
+    // app.put('/updateManuscript', async (req, res) => {
+    //   const { objectId } = req.query;
+    //   const { decision, editorEmail } = req.body;
+    //   const filter = { _id: new ObjectId(objectId) };
+    //   const updatedDoc = { $set: { decision } };
+    //   const result = await manuscriptCollection.updateOne(filter, updatedDoc);
+    //   if (result) {
+    //     const selectedManuscript = await manuscriptCollection.findOne(filter);
+    //     sendEmailToAuthorAfterDecision(selectedManuscript);
+    //     sendEmailToEditorAfterDecision(selectedManuscript, editorEmail);
+    //   }
+    //   res.send(result);
+    // });
+
+    app.put('/finalUpdateManuscript', verifyJWT, async (req, res) => {
       const { objectId } = req.query;
-      const { decision, editorEmail } = req.body;
+      const { decision, newMassage } = req.body;
       const filter = { _id: new ObjectId(objectId) };
-      const updatedDoc = { $set: { decision } };
+      const selectedManuscript = await manuscriptCollection.findOne(filter);
+      const editor = await userCollection.findOne({ userRole: 'editor' });
+      const senderName = editor?.userName;
+      let newMassageList = {};
+      const messages = selectedManuscript?.messages?.editorAndAuthor;
+      newMassageList = {
+        ...selectedManuscript.messages,
+        editorAndAuthor: [
+          ...messages,
+          {
+            ...newMassage,
+            senderName
+          }
+        ]
+      };
+
+      const updatedDoc = {
+        $set: { messages: newMassageList, decision }
+      };
       const result = await manuscriptCollection.updateOne(filter, updatedDoc);
       if (result) {
         const selectedManuscript = await manuscriptCollection.findOne(filter);
-        sendEmailToAuthorAfterDecision(selectedManuscript);
-        sendEmailToEditorAfterDecision(selectedManuscript, editorEmail);
+        // sendEmailToAuthorAfterDecision(selectedManuscript);
+        sendEmailToEditorAfterDecision(
+          selectedManuscript,
+          (editorEmail = newMassage.senderEmail)
+        );
       }
       res.send(result);
     });
 
-    app.put('/finalUpdateManuscript', async (req, res) => {
-      const { objectId } = req.query;
-      const { decision, editorEmail } = req.body;
-      const filter = { _id: new ObjectId(objectId) };
-      const updatedDoc = { $set: { decision } };
-      const result = await manuscriptCollection.updateOne(filter, updatedDoc);
-      if (result) {
-        const selectedManuscript = await manuscriptCollection.findOne(filter);
-        sendEmailToAuthorAfterDecision(selectedManuscript);
-        sendEmailToEditorAfterDecision(selectedManuscript, editorEmail);
-      }
-      res.send(result);
-    });
-
-    app.put('/forwardManuscript', async (req, res) => {
+    app.put('/forwardManuscript', verifyJWT, async (req, res) => {
       const { objectId } = req.query;
       if (!objectId) return;
       const { reviewers, dateTime } = req.body;
@@ -681,7 +774,7 @@ async function run() {
       }
     });
 
-    app.put('/declineManuscript', async (req, res) => {
+    app.put('/declineManuscript', verifyJWT, async (req, res) => {
       const { objectId } = req.query;
       if (!objectId) return;
       const { declinationMessage } = req.body;
@@ -701,7 +794,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/reviewerDecision', async (req, res) => {
+    app.put('/reviewerDecision', verifyJWT, async (req, res) => {
       const { objectId } = req.query;
       if (!objectId) return;
       const { reviewerDecision, reviewerComment, reviewerEmail } =
@@ -743,7 +836,7 @@ async function run() {
       }
     });
 
-    app.put('/updateUser', async (req, res) => {
+    app.put('/updateUser', verifyJWT, async (req, res) => {
       const { userEmail } = req.query;
       if (!userEmail) return;
       const updatedProfile = req.body;
@@ -757,28 +850,56 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/manuscriptChatBox', async (req, res) => {
-      const { manuscriptId } = req.query;
+    app.put('/manuscriptChatBox', verifyJWT, async (req, res) => {
+      const { manuscriptId, target } = req.query;
       const newMassage = req.body;
       const filter = { manuscriptId };
+      const selectedManuscript = await manuscriptCollection.findOne(filter);
       let senderName;
       if (newMassage.sender === 'reviewer') {
         senderName = newMassage.senderName;
       } else if (newMassage.sender === 'editor') {
         const editor = await userCollection.findOne({ userRole: 'editor' });
         senderName = editor?.userName;
+      } else {
+        senderName =
+          newMassage.senderEmail === selectedManuscript.authorEmail
+            ? selectedManuscript.authorInfo?.firstName +
+              ' ' +
+              selectedManuscript.authorInfo?.lastName
+            : (selectedManuscript.authorSequence?.find(
+                (a) => a.authorEmail === newMassage.senderEmail
+              )).authorName;
       }
-      const selectedManuscript = await manuscriptCollection.findOne(filter);
-      const messages = selectedManuscript?.messages?.editorAndReviewer;
-      const newMassageList = {
-        editorAndReviewer: [
-          ...messages,
-          {
-            ...newMassage,
-            senderName
-          }
-        ]
-      };
+      let newMassageList = {};
+      if (
+        newMassage.sender === 'author' ||
+        target?.toLowerCase() === 'author'
+      ) {
+        const messages = selectedManuscript?.messages?.editorAndAuthor;
+        newMassageList = {
+          ...selectedManuscript.messages,
+          editorAndAuthor: [
+            ...messages,
+            {
+              ...newMassage,
+              senderName
+            }
+          ]
+        };
+      } else {
+        const messages = selectedManuscript?.messages?.editorAndReviewer;
+        newMassageList = {
+          ...selectedManuscript.messages,
+          editorAndReviewer: [
+            ...messages,
+            {
+              ...newMassage,
+              senderName
+            }
+          ]
+        };
+      }
 
       const updatedMassages = {
         $set: { messages: newMassageList }
@@ -790,7 +911,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/payment', async (req, res) => {
+    app.put('/payment', verifyJWT, async (req, res) => {
       const { manuscriptId } = req.query;
       if (!manuscriptId) return;
       const { payableAmount, mobileNumber, dateTime } = req.body || {};
@@ -832,43 +953,8 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/newDraftManuscript', async (req, res) => {
-      const newDraft = req.body;
-      const result = await draftCollection.insertOne(newDraft);
-      res.send(result);
-    });
-
-    app.post('/newManuscript', async (req, res) => {
-      // validateUser();
-      const newManuscript = req.body;
-      const authorName =
-        newManuscript?.authorInfo?.firstName +
-        ' ' +
-        newManuscript?.authorInfo?.lastName;
-      const lastManuscript = await manuscriptCollection
-        .find()
-        ?.sort({ _id: -1 })
-        ?.limit(1)
-        ?.toArray();
-      const lastManuscriptId =
-        parseInt(lastManuscript[0]?.manuscriptId?.split('_')[1]) || 1000;
-      const manuscriptId = 'HSTU_' + (lastManuscriptId + 1);
-      const modifiedManuscript = { ...newManuscript, manuscriptId };
-      const result = await manuscriptCollection.insertOne(modifiedManuscript);
-      const editor = await userCollection.findOne({ userRole: 'editor' });
-      const editorEmail = editor?.userEmail;
-      const newManuscriptId = result?.insertedId?.toString()?.split('"')[0];
-      const authorsEmail = [
-        newManuscript?.authorEmail,
-        ...newManuscript?.authorSequence?.map((a) => a.authorEmail)
-      ];
-      sendEmailToAuthor(authorsEmail, newManuscriptId);
-      sendEmailToEditor(editorEmail, authorName, authorsEmail);
-      res.send(result);
-    });
-
     // delete methods
-    app.delete('/deleteDraft/:id', async (req, res) => {
+    app.delete('/deleteDraft/:id', verifyJWT, async (req, res) => {
       const id = req.params?.id;
       const query = { _id: new ObjectId(id) };
       const result = await draftCollection.deleteOne(query);
