@@ -683,6 +683,7 @@ async function run() {
     //   const filter = { _id: new ObjectId(objectId) };
     //   const updatedDoc = { $set: { decision } };
     //   const result = await manuscriptCollection.updateOne(filter, updatedDoc);
+
     //   if (result) {
     //     const selectedManuscript = await manuscriptCollection.findOne(filter);
     //     sendEmailToAuthorAfterDecision(selectedManuscript);
