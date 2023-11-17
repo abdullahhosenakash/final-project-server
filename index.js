@@ -453,7 +453,7 @@ function verifyJWT(req, res, next) {
 async function run() {
   try {
     await client.connect();
-    // console.log('connected');
+    console.log('connected');
     const userCollection = client
       .db('finalProjectDatabase')
       .collection('userCollection');
@@ -587,7 +587,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/newManuscript', async (req, res) => {
+    app.post('/newManuscript', verifyJWT, async (req, res) => {
       // validateUser();
       const newManuscript = req.body;
       const authorName =
@@ -676,21 +676,6 @@ async function run() {
       }
       res.send(result);
     });
-
-    // app.put('/updateManuscript', async (req, res) => {
-    //   const { objectId } = req.query;
-    //   const { decision, editorEmail } = req.body;
-    //   const filter = { _id: new ObjectId(objectId) };
-    //   const updatedDoc = { $set: { decision } };
-    //   const result = await manuscriptCollection.updateOne(filter, updatedDoc);
-
-    //   if (result) {
-    //     const selectedManuscript = await manuscriptCollection.findOne(filter);
-    //     sendEmailToAuthorAfterDecision(selectedManuscript);
-    //     sendEmailToEditorAfterDecision(selectedManuscript, editorEmail);
-    //   }
-    //   res.send(result);
-    // });
 
     app.put('/finalUpdateManuscript', verifyJWT, async (req, res) => {
       const { objectId } = req.query;
